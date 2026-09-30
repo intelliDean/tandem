@@ -1,6 +1,6 @@
-# Tandem Spread Orders ⚡
+# Tandem Spread Orders
 
-> **Atomic Paired Trading on Monad (Metropolis Hackathon — Onchain Finance & Trading)**  
+> **Atomic Paired Trading on Monad**  
 > Buy spot MON on Kuru CLOB and open a matching MON perpetual short on Perpl DEX in a single, rollback-guaranteed transaction.
 
 ---
@@ -88,27 +88,7 @@ forge test --fork-url https://rpc.monad.xyz --fork-block-number 109312895 -v
 
 ---
 
-## 5. Repository Structure
-
-```
-├── src/                        # Foundry Solidity contracts
-│   ├── TandemOrder.sol         # EIP-712 authorization & nonces
-│   ├── TandemSpreadRouter.sol  # Atomic execution router
-│   └── interfaces/             # Kuru CLOB & Perpl DEX interfaces
-├── test/                       # End-to-end integration tests
-│   ├── TandemSpreadRouter.t.sol# 8/8 comprehensive tests on Monad fork
-│   └── KuruIntegrationSpike.t.sol # Live CLOB probing tests
-├── packages/
-│   └── sdk/                    # @tandem/sdk TypeScript library (viem)
-├── services/
-│   └── executor/               # Constrained background executor bot
-└── apps/
-    └── web/                    # High-performance trading terminal (Vite + React)
-```
-
----
-
-## 6. TypeScript SDK Usage
+## 5. TypeScript SDK Usage
 
 ```typescript
 import { signSpreadOrder, calculateAdjustedEntrySpread, CONTRACT_ADDRESSES } from '@tandem/sdk';
@@ -137,7 +117,7 @@ const signature = await signSpreadOrder(walletClient, account, order, routerAddr
 
 ---
 
-## 7. Quickstart
+## 6. Quickstart
 
 ### 1. Build Contracts & SDK
 ```bash
@@ -164,7 +144,7 @@ Open [http://localhost:3000](http://localhost:3000) in your browser.
 
 ---
 
-## 8. Monad Metropolis Deployment Addresses
+## 7. Monad Metropolis Deployment Addresses
 
 | Component | Network | Contract Address | Notes / Explorer |
 | :--- | :--- | :--- | :--- |
