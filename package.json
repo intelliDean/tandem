@@ -7,6 +7,7 @@
     "test:contracts": "forge test --fork-url https://rpc.monad.xyz --fork-block-number 109312895",
     "build:contracts": "forge build",
     "build": "pnpm -r run build",
+    "test:e2e": "pnpm --filter @tandem/executor test:e2e",
     "dev:executor": "pnpm --filter @tandem/executor dev",
     "dev:web": "pnpm --filter @tandem/web dev"
   },

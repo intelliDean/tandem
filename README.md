@@ -86,6 +86,22 @@ forge test --fork-url https://rpc.monad.xyz --fork-block-number 109312895 -v
 7. `test_ExpiredOrder_Reverts`: Explicit rejection of orders past `order.expiry`.
 8. `test_ReplayAttack_Reverts`: Replay attack protection ensuring an order cannot be executed twice.
 
+### Live End-to-End Integration Flow (`pnpm test:e2e`)
+
+The repository includes a runnable live end-to-end integration flow ([`services/executor/src/e2e-flow.ts`](file:///mnt/data/Projects/tandem/services/executor/src/e2e-flow.ts)) testing the full paired trading cycle:
+1. Connects to the network and queries trader pre-trade balances (MON, USDC, AUSD).
+2. Reads the live best bid & ask from the **Kuru MON-USDC CLOB** orderbook.
+3. Constructs typed `SpreadOrder` parameters.
+4. Signs the order with **EIP-712** using the trader's private key.
+5. Simulates atomic paired execution on-chain via `eth_call`.
+6. Broadcasts the transaction to [`TandemSpreadRouter`](file:///mnt/data/Projects/tandem/src/TandemSpreadRouter.sol).
+7. Verifies post-trade settlement: Spot MON acquired (+3.65 MON), Perpl perpetual short opened, quote spent, and on-chain nonce marked.
+8. Verifies atomic rollback: tests an unmeetable spread condition and confirms transaction reverts cleanly with `0xf91fdddb` (retaining full funds).
+
+```bash
+pnpm test:e2e
+```
+
 ---
 
 ## 5. TypeScript SDK Usage

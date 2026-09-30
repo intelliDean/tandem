@@ -28,9 +28,13 @@ export interface DispatchOutcome {
 export async function dispatchSpreadOrder(
   routerAddress: Address,
   order: SpreadOrder,
-  signature: `0x${string}`
+  signature: `0x${string}`,
+  customWallet?: any,
+  customPubClient?: any
 ): Promise<DispatchOutcome> {
-  const txHash = await walletClient.writeContract({
+  const wallet = customWallet || walletClient;
+  const pubClient = customPubClient || publicClient;
+  const txHash = await wallet.writeContract({
     address: routerAddress,
     abi: TANDEM_SPREAD_ROUTER_ABI,
     functionName: 'executeSpreadOrder',
@@ -55,6 +59,6 @@ export async function dispatchSpreadOrder(
     ],
   });
 
-  const receipt = await publicClient.waitForTransactionReceipt({ hash: txHash });
+  const receipt = await pubClient.waitForTransactionReceipt({ hash: txHash });
   return { txHash, receipt };
 }

@@ -15,10 +15,12 @@ export async function simulateSpreadOrder(
   routerAddress: Address,
   order: SpreadOrder,
   signature: `0x${string}`,
-  callerAddress: Address
+  callerAddress: Address,
+  customClient?: any
 ): Promise<SimulationOutcome> {
+  const client = customClient || publicClient;
   try {
-    const { result } = await publicClient.simulateContract({
+    const { result } = await client.simulateContract({
       address: routerAddress,
       abi: TANDEM_SPREAD_ROUTER_ABI,
       functionName: 'executeSpreadOrder',
