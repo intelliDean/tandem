@@ -160,7 +160,46 @@ Open [http://localhost:3000](http://localhost:3000) in your browser.
 
 ---
 
-## 7. Monad Metropolis Deployment Addresses
+## 7. Containerization & Docker Deployment
+
+The protocol includes production-grade Docker containers orchestrated via **Docker Compose**:
+- **`tandem-executor`**: Node.js 22 LTS container running Fastify API server, on-chain watcher, order simulator, and execution loop with Docker healthchecks.
+- **`tandem-web`**: Production Nginx container serving the compiled React terminal with gzip compression, cache policies, SPA route fallbacks, and a reverse-proxy routing `/api/*` to the executor backend.
+
+### Quick Start with Docker
+
+```bash
+# 1. Prepare environment variables
+cp .env.example .env
+
+# 2. Build production images (instant offline packaging)
+pnpm docker:build
+
+# 3. Start containers in the background
+pnpm docker:up
+
+# 4. View live container logs
+pnpm docker:logs
+```
+
+### Endpoints & Healthchecks
+
+| Service | Port | Endpoint | Description |
+| :--- | :--- | :--- | :--- |
+| **Web Terminal** | `3000` | `http://localhost:3000` | Nginx SPA interface |
+| **API Reverse Proxy** | `3000` | `http://localhost:3000/api/orders` | Proxied through Nginx |
+| **Executor Health** | `3001` | `http://localhost:3001/health` | Container healthcheck endpoint |
+| **Executor API** | `3001` | `http://localhost:3001/api/market` | Orderbook & spread polling |
+
+### Stopping Containers
+
+```bash
+pnpm docker:down
+```
+
+---
+
+## 8. Monad Metropolis Deployment Addresses
 
 | Component | Network | Contract Address | Notes / Explorer |
 | :--- | :--- | :--- | :--- |

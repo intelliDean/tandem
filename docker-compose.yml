@@ -1,0 +1,33 @@
+services:
+  executor:
+    build:
+      context: .
+      dockerfile: Dockerfile.executor
+    container_name: tandem-executor
+    ports:
+      - "${EXECUTOR_PORT:-3001}:3001"
+    environment:
+      - PORT=3001
+      - CHAIN_ID=${CHAIN_ID:-10143}
+      - MONAD_RPC_URL=${MONAD_RPC_URL:-https://testnet-rpc.monad.xyz}
+      - TANDEM_ROUTER_ADDRESS=${TANDEM_ROUTER_ADDRESS:-0xC7885f87e2027F90D8cd4372CE5071b3aFE19E91}
+      - EXECUTOR_PRIVATE_KEY=${EXECUTOR_PRIVATE_KEY:-}
+    restart: unless-stopped
+    healthcheck:
+      test: ["CMD-SHELL", "wget -qO- http://127.0.0.1:3001/health || exit 1"]
+      interval: 15s
+      timeout: 5s
+      retries: 3
+      start_period: 10s
+
+  web:
+    build:
+      context: .
+      dockerfile: Dockerfile.web
+    container_name: tandem-web
+    ports:
+      - "${WEB_PORT:-3000}:80"
+    depends_on:
+      executor:
+        condition: service_healthy
+    restart: unless-stopped

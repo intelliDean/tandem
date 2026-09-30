@@ -9,7 +9,11 @@
     "build": "pnpm -r run build",
     "test:e2e": "pnpm --filter @tandem/executor test:e2e",
     "dev:executor": "pnpm --filter @tandem/executor dev",
-    "dev:web": "pnpm --filter @tandem/web dev"
+    "dev:web": "pnpm --filter @tandem/web dev",
+    "docker:build": "pnpm build && docker compose build",
+    "docker:up": "docker compose up -d",
+    "docker:down": "docker compose down",
+    "docker:logs": "docker compose logs -f"
   },
   "devDependencies": {
     "typescript": "^5.7.0"

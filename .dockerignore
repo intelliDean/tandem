@@ -1,0 +1,13 @@
+out
+cache
+broadcast
+.git
+.gitignore
+.agents
+.gemini
+*.log
+scratch
+lib/forge-std
+script
+test
+src
