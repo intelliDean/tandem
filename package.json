@@ -1,0 +1,16 @@
+{
+  "name": "tandem-spread-orders",
+  "version": "1.0.0",
+  "private": true,
+  "description": "Atomic spread orders on Monad combining Kuru CLOB spot and Perpl DEX perpetuals",
+  "scripts": {
+    "test:contracts": "forge test --fork-url https://rpc.monad.xyz --fork-block-number 109312895",
+    "build:contracts": "forge build",
+    "build": "pnpm -r run build",
+    "dev:executor": "pnpm --filter @tandem/executor dev",
+    "dev:web": "pnpm --filter @tandem/web dev"
+  },
+  "devDependencies": {
+    "typescript": "^5.7.0"
+  }
+}

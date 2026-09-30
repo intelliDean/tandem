@@ -1,0 +1,18 @@
+# Dependencies
+node_modules/
+**/node_modules/
+.pnpm-store/
+
+# Foundry
+out/
+cache/
+
+# TypeScript / Vite build outputs
+dist/
+**/dist/
+*.tsbuildinfo
+
+# Environment variables
+.env
+.env.local
+tandem.txt

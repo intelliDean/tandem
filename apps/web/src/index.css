@@ -1,0 +1,204 @@
+:root {
+  --bg-primary: #0a0b0e;
+  --bg-secondary: #12141a;
+  --bg-card: rgba(22, 26, 35, 0.75);
+  --bg-card-hover: rgba(28, 33, 46, 0.85);
+  --border-color: rgba(255, 255, 255, 0.08);
+  --border-glow: rgba(0, 240, 255, 0.25);
+  
+  --text-main: #f0f3f8;
+  --text-muted: #8b949e;
+  --text-dim: #545d68;
+
+  --accent-cyan: #00f0ff;
+  --accent-purple: #9d4edd;
+  --accent-green: #00e676;
+  --accent-red: #ff3366;
+  --accent-amber: #ffb703;
+
+  --font-sans: 'Outfit', -apple-system, BlinkMacSystemFont, sans-serif;
+  --font-mono: 'JetBrains Mono', monospace;
+}
+
+* {
+  box-sizing: border-box;
+  margin: 0;
+  padding: 0;
+}
+
+body {
+  background-color: var(--bg-primary);
+  color: var(--text-main);
+  font-family: var(--font-sans);
+  -webkit-font-smoothing: antialiased;
+  min-height: 100vh;
+  overflow-x: hidden;
+  background-image: 
+    radial-gradient(circle at 15% 15%, rgba(0, 240, 255, 0.04) 0%, transparent 40%),
+    radial-gradient(circle at 85% 85%, rgba(157, 78, 221, 0.05) 0%, transparent 40%);
+}
+
+.mono {
+  font-family: var(--font-mono);
+}
+
+/* Glassmorphism Card */
+.glass-panel {
+  background: var(--bg-card);
+  backdrop-filter: blur(16px);
+  -webkit-backdrop-filter: blur(16px);
+  border: 1px solid var(--border-color);
+  border-radius: 14px;
+  box-shadow: 0 8px 32px 0 rgba(0, 0, 0, 0.37);
+  transition: all 0.2s cubic-bezier(0.16, 1, 0.3, 1);
+}
+
+.glass-panel:hover {
+  border-color: rgba(255, 255, 255, 0.14);
+}
+
+/* Buttons */
+.btn-primary {
+  background: linear-gradient(135deg, #00f0ff 0%, #0088ff 100%);
+  color: #000;
+  font-weight: 700;
+  border: none;
+  border-radius: 10px;
+  padding: 12px 20px;
+  font-size: 15px;
+  cursor: pointer;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  transition: all 0.2s ease;
+  box-shadow: 0 4px 20px rgba(0, 240, 255, 0.25);
+}
+
+.btn-primary:hover:not(:disabled) {
+  transform: translateY(-1px);
+  box-shadow: 0 6px 25px rgba(0, 240, 255, 0.4);
+}
+
+.btn-primary:disabled {
+  opacity: 0.45;
+  cursor: not-allowed;
+  box-shadow: none;
+}
+
+.btn-danger {
+  background: rgba(255, 51, 102, 0.12);
+  color: var(--accent-red);
+  border: 1px solid rgba(255, 51, 102, 0.3);
+  font-weight: 600;
+  border-radius: 8px;
+  padding: 8px 14px;
+  font-size: 13px;
+  cursor: pointer;
+  transition: all 0.15s ease;
+}
+
+.btn-danger:hover {
+  background: rgba(255, 51, 102, 0.2);
+  border-color: var(--accent-red);
+}
+
+.btn-secondary {
+  background: rgba(255, 255, 255, 0.05);
+  color: var(--text-main);
+  border: 1px solid var(--border-color);
+  border-radius: 8px;
+  padding: 8px 14px;
+  font-size: 13px;
+  cursor: pointer;
+  transition: all 0.15s ease;
+}
+
+.btn-secondary:hover {
+  background: rgba(255, 255, 255, 0.09);
+}
+
+/* Badges */
+.badge {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  padding: 3px 8px;
+  border-radius: 6px;
+  font-size: 11px;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+}
+
+.badge-kuru {
+  background: rgba(0, 240, 255, 0.12);
+  color: var(--accent-cyan);
+  border: 1px solid rgba(0, 240, 255, 0.25);
+}
+
+.badge-perpl {
+  background: rgba(157, 78, 221, 0.14);
+  color: #c77dff;
+  border: 1px solid rgba(157, 78, 221, 0.3);
+}
+
+.badge-success {
+  background: rgba(0, 230, 118, 0.12);
+  color: var(--accent-green);
+  border: 1px solid rgba(0, 230, 118, 0.25);
+}
+
+.badge-atomic {
+  background: linear-gradient(135deg, rgba(0, 240, 255, 0.15), rgba(157, 78, 221, 0.15));
+  color: #fff;
+  border: 1px solid rgba(255, 255, 255, 0.2);
+}
+
+/* Inputs */
+.input-box {
+  background: rgba(10, 12, 16, 0.8);
+  border: 1px solid var(--border-color);
+  border-radius: 10px;
+  padding: 12px 14px;
+  color: #fff;
+  font-size: 15px;
+  width: 100%;
+  font-family: var(--font-mono);
+  outline: none;
+  transition: border-color 0.2s ease;
+}
+
+.input-box:focus {
+  border-color: var(--accent-cyan);
+  box-shadow: 0 0 0 1px rgba(0, 240, 255, 0.25);
+}
+
+/* Tab selector */
+.tab-group {
+  display: flex;
+  background: rgba(0, 0, 0, 0.35);
+  border-radius: 10px;
+  padding: 4px;
+  border: 1px solid var(--border-color);
+  gap: 4px;
+}
+
+.tab-btn {
+  flex: 1;
+  padding: 8px 12px;
+  border-radius: 7px;
+  font-size: 13px;
+  font-weight: 600;
+  border: none;
+  background: transparent;
+  color: var(--text-muted);
+  cursor: pointer;
+  transition: all 0.15s ease;
+}
+
+.tab-btn.active {
+  background: var(--bg-card);
+  color: #fff;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.3);
+}
