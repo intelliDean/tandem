@@ -4,7 +4,7 @@ import { TANDEM_SPREAD_ROUTER_ABI, monadChain } from '@tandem/sdk';
 import { publicClient, fetchLiveMarketState } from './watcher.js';
 import { orderStore } from './orderStore.js';
 
-const ROUTER_ADDRESS = (process.env.TANDEM_ROUTER_ADDRESS || '0x5615dEB798BB3E4dFa0139dFa1b3D433Cc23b72f') as Address;
+const ROUTER_ADDRESS = (process.env.TANDEM_ROUTER_ADDRESS || '0xC7885f87e2027F90D8cd4372CE5071b3aFE19E91') as Address;
 const EXECUTOR_KEY = process.env.EXECUTOR_PRIVATE_KEY as `0x${string}` | undefined;
 
 const executorAccount = EXECUTOR_KEY

@@ -166,10 +166,12 @@ Open [http://localhost:3000](http://localhost:3000) in your browser.
 
 ## 8. Monad Metropolis Deployment Addresses
 
-| Component | Network | Contract Address |
-| :--- | :--- | :--- |
-| **Kuru MON-USDC Market** | Monad (143) | `0x065C9d28E428A0db40191a54d33d5b7c71a9C394` |
-| **Perpl Exchange Proxy** | Monad (143) | `0x34B6552d57a35a1D042CcAe1951BD1C370112a6F` |
-| **USDC** | Monad (143) | `0x754704Bc059F8C67012fEd69BC8A327a5aafb603` |
-| **AUSD** | Monad (143) | `0x00000000eFE302BEAA2b3e6e1b18d08D69a9012a` |
-| **TandemSpreadRouter** | Monad Fork | Verified via `DeployTandemSpreadRouter.s.sol` |
+| Component | Network | Contract Address | Notes / Explorer |
+| :--- | :--- | :--- | :--- |
+| **TandemSpreadRouter** | **Monad Testnet (10143)** | `0xC7885f87e2027F90D8cd4372CE5071b3aFE19E91` | **Live Onchain** • Block `66981631` • Tx: `0xaee18e5f...b425282` |
+| **Deployer Wallet** | Monad Testnet (10143) | `0xB99DF9c70a4bA401CCc32DEBa43393905C80294C` | Verified Deployer & Fee Recipient |
+| **Kuru MON-USDC Market** | Monad (143) | `0x065C9d28E428A0db40191a54d33d5b7c71a9C394` | Live CLOB OrderBook |
+| **Perpl Exchange Proxy** | Monad (143) | `0x34B6552d57a35a1D042CcAe1951BD1C370112a6F` | Isolated Perpetual DEX Engine |
+| **USDC** | Monad (143) | `0x754704Bc059F8C67012fEd69BC8A327a5aafb603` | Spot Quote Asset |
+| **AUSD** | Monad (143) | `0x00000000eFE302BEAA2b3e6e1b18d08D69a9012a` | Perpetual Margin Asset |
+
