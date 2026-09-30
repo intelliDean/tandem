@@ -3,9 +3,10 @@ pragma solidity ^0.8.20;
 
 import "./TandemOrder.sol";
 import "./libraries/SpreadMath.sol";
-import "./interfaces/IKuruOrderBook.sol";
-import "./interfaces/IPerplExchangeOfficial.sol";
+import "./libraries/KuruAdapter.sol";
+import "./libraries/PerplAdapter.sol";
 import "./interfaces/IERC20.sol";
+import "./interfaces/IPerplExchangeOfficial.sol";
 
 /// @title TandemSpreadRouter
 /// @notice Central atomic execution router for paired Kuru Spot + Perpl Perp trades
@@ -52,13 +53,17 @@ contract TandemSpreadRouter is TandemOrder {
 
     // ============ Errors ============
 
-    error InsufficientSpotOutput(uint256 received, uint256 expected);
     error InsufficientQuoteBalance(uint256 available, uint256 required);
+    error InsufficientMonSentToClose(uint256 sent, uint256 required);
     error TransferFailed();
 
     // ============ Constructor ============
 
-    constructor(address _perplExchange, address _collateralToken, address _feeRecipient) TandemOrder() {
+    constructor(
+        address _perplExchange,
+        address _collateralToken,
+        address _feeRecipient
+    ) TandemOrder() {
         perplExchange = IExchange(_perplExchange);
         collateralToken = IERC20(_collateralToken);
         feeRecipient = _feeRecipient;
@@ -81,118 +86,32 @@ contract TandemSpreadRouter is TandemOrder {
         bytes32 orderHash = _verifySpreadOrder(order, signature);
 
         // 2. Pull collateral and spot quote tokens from order owner
-        if (order.quoteToken == address(collateralToken)) {
-            uint256 totalNeeded = order.maxSpotSpend + order.collateral;
-            if (collateralToken.balanceOf(order.owner) < totalNeeded) {
-                revert InsufficientQuoteBalance(collateralToken.balanceOf(order.owner), totalNeeded);
-            }
-            require(
-                collateralToken.transferFrom(order.owner, address(this), totalNeeded),
-                "Collateral transfer failed"
-            );
-        } else {
-            // Distinct tokens (e.g. USDC for spot, AUSD for Perpl margin)
-            require(
-                IERC20(order.quoteToken).transferFrom(order.owner, address(this), order.maxSpotSpend),
-                "Spot quote transfer failed"
-            );
-            require(
-                collateralToken.transferFrom(order.owner, address(this), order.collateral),
-                "Perp collateral transfer failed"
-            );
-        }
+        _pullEntryFunds(order);
 
-        // ---------------------------------------------------------------------
-        // LEG 1: Kuru Spot Buy (Fill-Or-Kill)
-        // ---------------------------------------------------------------------
-        IERC20(order.quoteToken).approve(order.kuruMarket, order.maxSpotSpend);
-        uint256 monBefore = address(this).balance;
-        uint256 quoteBalBefore = IERC20(order.quoteToken).balanceOf(address(this));
-
-        IKuruOrderBook(order.kuruMarket).placeAndExecuteMarketBuy(
-            uint96(order.maxSpotSpend),
-            order.quantity, // Min MON out (FOK)
-            false,          // not margin
-            true            // FOK enforces full fill
+        // 3. Leg 1: Spot Buy on Kuru CLOB
+        (uint256 actualMonBought, uint256 actualQuoteSpent) = KuruAdapter.executeMarketBuy(
+            order.kuruMarket,
+            order.quoteToken,
+            order.maxSpotSpend,
+            order.quantity
         );
 
-        uint256 actualMonBought = address(this).balance - monBefore;
-        if (actualMonBought < order.quantity) {
-            revert InsufficientSpotOutput(actualMonBought, order.quantity);
-        }
+        // 4. Leg 2: Perpetual Short on Perpl DEX
+        uint256 perpOrderId = _executePerplShortLeg(order, actualMonBought);
 
-        uint256 actualQuoteSpent = quoteBalBefore - IERC20(order.quoteToken).balanceOf(address(this));
+        // 5. Leg 3: Spread and Accounting Verification
+        int256 actualSpread = _verifySpreadAndFees(order, actualQuoteSpent, actualMonBought);
 
-        // ---------------------------------------------------------------------
-        // LEG 2: Perpl Perpetual Short
-        // ---------------------------------------------------------------------
-        collateralToken.approve(address(perplExchange), order.collateral);
-
-        // Ensure account exists on Perpl for router
-        try perplExchange.getAccountByAddr(address(this)) returns (IExchange.AccountInfo memory) {
-            perplExchange.depositCollateral(order.collateral);
-        } catch {
-            perplExchange.createAccount(order.collateral);
-        }
-
-        // Place matching short order on Perpl
-        // If order.perpLots is specified, use it directly; otherwise MON 18 decimals -> Perpl lotDecimals (5 decimals) -> / 1e13
-        uint256 lotLNS = order.perpLots > 0 ? order.perpLots : (actualMonBought / 1e13);
-
-        IExchange.OrderDesc memory perpOrderDesc = IExchange.OrderDesc({
-            orderDescId: 0,
-            perpId: order.perpId,
-            orderType: IExchange.OrderDescEnum.wrap(1), // OpenShort
-            orderId: 0,
-            pricePNS: order.minPerpPrice,
-            lotLNS: lotLNS,
-            expiryBlock: block.number + 500,
-            postOnly: false,
-            fillOrKill: false,
-            immediateOrCancel: true, // IOC
-            maxMatches: 0,
-            leverageHdths: 100,      // 1x leverage
-            lastExecutionBlock: 0,
-            amountCNS: 0,
-            maxNegPnlCollatBPS: 0
-        });
-
-        IExchange.OrderSignature memory sig = perplExchange.execOrder(perpOrderDesc);
-
-        // ---------------------------------------------------------------------
-        // LEG 3: Spread and Accounting Verification
-        // ---------------------------------------------------------------------
-        uint256 effectiveSpotPrice = SpreadMath.computeSpotPrice(actualQuoteSpent, actualMonBought);
-        uint256 effectivePerpPrice = order.minPerpPrice; // In real fill, entry price from Perpl position
-        uint256 actualFee = 0; // Configured service fee
-
-        int256 actualSpread = SpreadMath.computeAdjustedEntrySpread(
-            effectivePerpPrice,
-            effectiveSpotPrice,
-            actualFee
-        );
-
-        // Enforce approved spread limits. If unsatisfied, entire tx reverts rolling back both legs!
-        SpreadMath.validateSpreadAndFees(actualSpread, order.minSpread, actualFee, order.maxFee);
-
-        // Refund any unused spot quote spend back to user
-        uint256 unspentQuote = order.maxSpotSpend - actualQuoteSpent;
-        if (unspentQuote > 0) {
-            IERC20(order.quoteToken).transfer(order.owner, unspentQuote);
-        }
-
-        // Transfer purchased MON to recipient
-        address recipient = order.account != address(0) ? order.account : order.owner;
-        (bool sent, ) = recipient.call{value: actualMonBought}("");
-        if (!sent) revert TransferFailed();
+        // 6. Settle balances: refund unspent quote & deliver purchased MON to recipient
+        _settleEntryDeliveries(order, actualQuoteSpent, actualMonBought);
 
         result = ExecutionResult({
             orderHash: orderHash,
             spotMonReceived: actualMonBought,
             spotQuoteSpent: actualQuoteSpent,
-            perpOrderId: sig.orderId,
+            perpOrderId: perpOrderId,
             actualSpread: actualSpread,
-            actualFee: actualFee
+            actualFee: 0
         });
 
         emit SpreadEntryExecuted(
@@ -200,9 +119,9 @@ contract TandemSpreadRouter is TandemOrder {
             order.owner,
             actualMonBought,
             actualQuoteSpent,
-            sig.orderId,
+            perpOrderId,
             actualSpread,
-            actualFee
+            0
         );
     }
 
@@ -218,70 +137,128 @@ contract TandemSpreadRouter is TandemOrder {
         // 1. Verify EIP-712 authorization
         bytes32 orderHash = _verifyCloseOrder(order, signature);
 
-        // 2. Receive MON to sell
-        uint96 kuruSize = uint96(order.quantity / 1e8);
-        uint256 nativeSellAmount = uint256(kuruSize) * 1e8;
-        require(msg.value >= nativeSellAmount, "Insufficient MON sent to close");
+        // 2. Validate sufficient native MON sent
+        uint96 kuruSize = KuruAdapter.toKuruSize(order.quantity);
+        uint256 nativeSellAmount = KuruAdapter.toMonWei(kuruSize);
+        if (msg.value < nativeSellAmount) {
+            revert InsufficientMonSentToClose(msg.value, nativeSellAmount);
+        }
 
-        // ---------------------------------------------------------------------
-        // LEG 1: Sell Spot MON on Kuru
-        // ---------------------------------------------------------------------
-        uint256 quoteBefore = IERC20(order.quoteToken).balanceOf(address(this));
-
-        // Send exact nativeSellAmount required by Kuru's sizePrecision scaling
-        quoteReceived = IKuruOrderBook(order.kuruMarket).placeAndExecuteMarketSell{value: nativeSellAmount}(
-            kuruSize,
-            order.minSpotProceeds,
-            false,
-            true // FOK
+        // 3. Leg 1: Sell Spot MON on Kuru CLOB
+        quoteReceived = KuruAdapter.executeMarketSell(
+            order.kuruMarket,
+            order.quoteToken,
+            order.quantity,
+            order.minSpotProceeds
         );
 
-        uint256 actualQuoteReceived = IERC20(order.quoteToken).balanceOf(address(this)) - quoteBefore;
-
-        // ---------------------------------------------------------------------
-        // LEG 2: Close Short on Perpl
-        // ---------------------------------------------------------------------
+        // 4. Leg 2: Close Short on Perpl
         uint256 lotLNS = order.perpLots > 0 ? order.perpLots : (uint256(order.quantity) / 1e13);
+        perpCloseOrderId = PerplAdapter.closeShort(
+            perplExchange,
+            order.perpId,
+            order.maxPerpClosePrice,
+            lotLNS
+        );
 
-        IExchange.OrderDesc memory closeDesc = IExchange.OrderDesc({
-            orderDescId: 0,
-            perpId: order.perpId,
-            orderType: IExchange.OrderDescEnum.wrap(3), // CloseShort
-            orderId: 0,
-            pricePNS: order.maxPerpClosePrice,
-            lotLNS: lotLNS,
-            expiryBlock: block.number + 500,
-            postOnly: false,
-            fillOrKill: false,
-            immediateOrCancel: true,
-            maxMatches: 0,
-            leverageHdths: 100,
-            lastExecutionBlock: 0,
-            amountCNS: 0,
-            maxNegPnlCollatBPS: 0
-        });
-
-        IExchange.OrderSignature memory sig = perplExchange.execOrder(closeDesc);
-        perpCloseOrderId = sig.orderId;
-
-        // Send quote proceeds back to user
-        address recipient = order.account != address(0) ? order.account : order.owner;
-        IERC20(order.quoteToken).transfer(recipient, actualQuoteReceived);
-
-        // Refund any remaining native MON back to recipient
-        uint256 monRemaining = address(this).balance;
-        if (monRemaining > 0) {
-            (bool success,) = recipient.call{value: monRemaining}("");
-            require(success, "Native MON refund failed");
-        }
+        // 5. Settle exit proceeds and refund excess native MON
+        _settleExitDeliveries(order, quoteReceived);
 
         emit SpreadExitExecuted(
             orderHash,
             order.owner,
             order.quantity,
-            actualQuoteReceived,
+            quoteReceived,
             perpCloseOrderId,
             order.minExitSpread
         );
+    }
+
+    // ============ Internal Helper Functions ============
+
+    /// @dev Pulls quote tokens and collateral from the order owner
+    function _pullEntryFunds(SpreadOrder calldata order) internal {
+        if (order.quoteToken == address(collateralToken)) {
+            uint256 totalNeeded = order.maxSpotSpend + order.collateral;
+            if (collateralToken.balanceOf(order.owner) < totalNeeded) {
+                revert InsufficientQuoteBalance(collateralToken.balanceOf(order.owner), totalNeeded);
+            }
+            require(
+                collateralToken.transferFrom(order.owner, address(this), totalNeeded),
+                "Collateral transfer failed"
+            );
+        } else {
+            require(
+                IERC20(order.quoteToken).transferFrom(order.owner, address(this), order.maxSpotSpend),
+                "Spot quote transfer failed"
+            );
+            require(
+                collateralToken.transferFrom(order.owner, address(this), order.collateral),
+                "Perp collateral transfer failed"
+            );
+        }
+    }
+
+    /// @dev Deposits margin and opens short position on Perpl DEX
+    function _executePerplShortLeg(
+        SpreadOrder calldata order,
+        uint256 actualMonBought
+    ) internal returns (uint256 perpOrderId) {
+        PerplAdapter.ensureAccountAndDeposit(perplExchange, collateralToken, order.collateral);
+
+        uint256 lotLNS = order.perpLots > 0 ? order.perpLots : (actualMonBought / 1e13);
+        perpOrderId = PerplAdapter.openShort(
+            perplExchange,
+            order.perpId,
+            order.minPerpPrice,
+            lotLNS
+        );
+    }
+
+    /// @dev Computes and strictly enforces net spread conditions
+    function _verifySpreadAndFees(
+        SpreadOrder calldata order,
+        uint256 actualQuoteSpent,
+        uint256 actualMonBought
+    ) internal pure returns (int256 actualSpread) {
+        uint256 effectiveSpotPrice = SpreadMath.computeSpotPrice(actualQuoteSpent, actualMonBought);
+        uint256 effectivePerpPrice = order.minPerpPrice;
+        uint256 actualFee = 0;
+
+        actualSpread = SpreadMath.computeAdjustedEntrySpread(
+            effectivePerpPrice,
+            effectiveSpotPrice,
+            actualFee
+        );
+
+        SpreadMath.validateSpreadAndFees(actualSpread, order.minSpread, actualFee, order.maxFee);
+    }
+
+    /// @dev Refunds unused quote tokens and forwards native MON to recipient
+    function _settleEntryDeliveries(
+        SpreadOrder calldata order,
+        uint256 actualQuoteSpent,
+        uint256 actualMonBought
+    ) internal {
+        uint256 unspentQuote = order.maxSpotSpend - actualQuoteSpent;
+        if (unspentQuote > 0) {
+            IERC20(order.quoteToken).transfer(order.owner, unspentQuote);
+        }
+
+        address recipient = order.account != address(0) ? order.account : order.owner;
+        (bool sent, ) = recipient.call{value: actualMonBought}("");
+        if (!sent) revert TransferFailed();
+    }
+
+    /// @dev Transferred exit quote proceeds to recipient and refunds remaining native MON
+    function _settleExitDeliveries(CloseOrder calldata order, uint256 quoteReceived) internal {
+        address recipient = order.account != address(0) ? order.account : order.owner;
+        IERC20(order.quoteToken).transfer(recipient, quoteReceived);
+
+        uint256 monRemaining = address(this).balance;
+        if (monRemaining > 0) {
+            (bool success, ) = recipient.call{value: monRemaining}("");
+            if (!success) revert TransferFailed();
+        }
     }
 }
