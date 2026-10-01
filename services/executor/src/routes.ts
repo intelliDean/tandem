@@ -25,6 +25,23 @@ interface SubmitOrderBody {
   signature: `0x${string}`;
 }
 
+function serializeBigInt(obj: any): any {
+  if (typeof obj === 'bigint') {
+    return obj.toString();
+  }
+  if (Array.isArray(obj)) {
+    return obj.map(serializeBigInt);
+  }
+  if (obj !== null && typeof obj === 'object') {
+    const res: any = {};
+    for (const [k, v] of Object.entries(obj)) {
+      res[k] = serializeBigInt(v);
+    }
+    return res;
+  }
+  return obj;
+}
+
 export const apiRoutes: FastifyPluginAsync = async (fastify) => {
   fastify.get('/health', async () => {
     return { status: 'ok', timestamp: Date.now() };
@@ -32,43 +49,18 @@ export const apiRoutes: FastifyPluginAsync = async (fastify) => {
 
   fastify.get('/api/market', async () => {
     const market = await fetchLiveMarketState();
-    return {
-      spotBestBid: market.spotBestBid.toString(),
-      spotBestAsk: market.spotBestAsk.toString(),
-      perpMarkPrice: market.perpMarkPrice.toString(),
-      currentSpread: market.currentSpread.toString(),
+    return serializeBigInt({
+      spotBestBid: market.spotBestBid,
+      spotBestAsk: market.spotBestAsk,
+      perpMarkPrice: market.perpMarkPrice,
+      currentSpread: market.currentSpread,
       timestamp: market.timestamp,
-    };
+    });
   });
 
   fastify.get('/api/orders', async () => {
     const orders = orderStore.getAllOrders();
-    return orders.map((o) => ({
-      ...o,
-      order: {
-        ...o.order,
-        nonce: o.order.nonce.toString(),
-        expiry: o.order.expiry.toString(),
-        quantity: o.order.quantity.toString(),
-        perpLots: o.order.perpLots.toString(),
-        maxSpotSpend: o.order.maxSpotSpend.toString(),
-        minPerpPrice: o.order.minPerpPrice.toString(),
-        collateral: o.order.collateral.toString(),
-        minSpread: o.order.minSpread.toString(),
-        maxFee: o.order.maxFee.toString(),
-      },
-      lastSimulatedSpread: o.lastSimulatedSpread?.toString(),
-      executionResult: o.executionResult
-        ? {
-            ...o.executionResult,
-            spotMonReceived: o.executionResult.spotMonReceived.toString(),
-            spotQuoteSpent: o.executionResult.spotQuoteSpent.toString(),
-            perpOrderId: o.executionResult.perpOrderId.toString(),
-            actualSpread: o.executionResult.actualSpread.toString(),
-            actualFee: o.executionResult.actualFee.toString(),
-          }
-        : undefined,
-    }));
+    return serializeBigInt(orders);
   });
 
   fastify.post('/api/orders', async (request, reply) => {

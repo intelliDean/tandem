@@ -16,6 +16,7 @@ COPY node_modules ./node_modules
 # Copy SDK artifacts
 COPY packages/sdk/package.json ./packages/sdk/package.json
 COPY packages/sdk/dist ./packages/sdk/dist
+COPY packages/sdk/node_modules ./packages/sdk/node_modules
 
 # Copy Executor service artifacts
 COPY services/executor/package.json ./services/executor/package.json

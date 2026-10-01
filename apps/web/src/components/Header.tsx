@@ -5,12 +5,14 @@ interface HeaderProps {
   walletConnected: boolean;
   account: string;
   onToggleWallet: () => void;
+  networkName?: string;
 }
 
 export const Header: React.FC<HeaderProps> = ({
   walletConnected,
   account,
   onToggleWallet,
+  networkName = 'Monad Testnet (#10143)',
 }) => {
   return (
     <header style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '28px' }}>
@@ -42,10 +44,11 @@ export const Header: React.FC<HeaderProps> = ({
         <div className="glass-panel" style={{ padding: '8px 14px', display: 'flex', alignItems: 'center', gap: '8px', fontSize: '13px' }}>
           <span style={{ width: '8px', height: '8px', borderRadius: '50%', backgroundColor: 'var(--accent-green)', boxShadow: '0 0 8px var(--accent-green)' }}></span>
           <span style={{ color: 'var(--text-muted)' }}>Network:</span>
-          <span className="mono" style={{ fontWeight: 600 }}>Monad Testnet (#10143)</span>
+          <span className="mono" style={{ fontWeight: 600 }}>{networkName}</span>
         </div>
 
         <button
+          id="btn-connect-wallet"
           className="btn-secondary mono"
           onClick={onToggleWallet}
           style={{ display: 'flex', alignItems: 'center', gap: '8px' }}

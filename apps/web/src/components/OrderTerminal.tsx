@@ -195,6 +195,7 @@ export const OrderTerminal: React.FC<OrderTerminalProps> = ({
 
         {/* Action CTA Button */}
         <button
+          id="btn-submit-order"
           className="btn-primary"
           onClick={onSubmit}
           disabled={isExecuting}

@@ -1,11 +1,11 @@
-import { Address, WalletClient, Account } from 'viem';
+import { Address, WalletClient, Account, hashTypedData } from 'viem';
 import { SpreadOrder, CloseOrder } from './types.js';
 
-export function getTandemDomain(verifyingContract: Address, chainId: number) {
+export function getTandemDomain(verifyingContract: Address, chainId: number = 143) {
   return {
     name: 'TandemSpreadOrders',
     version: '1',
-    chainId: BigInt(chainId),
+    chainId: BigInt(chainId || 143),
     verifyingContract,
   } as const;
 }
@@ -48,15 +48,17 @@ export const CLOSE_ORDER_TYPES = {
 
 export async function signSpreadOrder(
   client: WalletClient,
-  account: Account | Address,
+  account: Account | Address | undefined,
   order: SpreadOrder,
   verifyingContract: Address,
-  chainId: number
+  chainId: number = 143
 ): Promise<`0x${string}`> {
   const domain = getTandemDomain(verifyingContract, chainId);
+  const signingAccount = account || client.account;
+  if (!signingAccount) throw new Error('Signing account is required');
 
   return client.signTypedData({
-    account,
+    account: signingAccount,
     domain,
     types: SPREAD_ORDER_TYPES,
     primaryType: 'SpreadOrder',
@@ -81,15 +83,17 @@ export async function signSpreadOrder(
 
 export async function signCloseOrder(
   client: WalletClient,
-  account: Account | Address,
+  account: Account | Address | undefined,
   order: CloseOrder,
   verifyingContract: Address,
-  chainId: number
+  chainId: number = 143
 ): Promise<`0x${string}`> {
   const domain = getTandemDomain(verifyingContract, chainId);
+  const signingAccount = account || client.account;
+  if (!signingAccount) throw new Error('Signing account is required');
 
   return client.signTypedData({
-    account,
+    account: signingAccount,
     domain,
     types: CLOSE_ORDER_TYPES,
     primaryType: 'CloseOrder',
@@ -109,3 +113,60 @@ export async function signCloseOrder(
     },
   });
 }
+
+export function hashSpreadOrder(
+  order: SpreadOrder,
+  verifyingContract: Address,
+  chainId: number = 143
+): `0x${string}` {
+  const domain = getTandemDomain(verifyingContract, chainId);
+  return hashTypedData({
+    domain,
+    types: SPREAD_ORDER_TYPES,
+    primaryType: 'SpreadOrder',
+    message: {
+      owner: order.owner,
+      account: order.account,
+      nonce: order.nonce,
+      expiry: order.expiry,
+      kuruMarket: order.kuruMarket,
+      quoteToken: order.quoteToken,
+      perpId: order.perpId,
+      quantity: order.quantity,
+      perpLots: order.perpLots,
+      maxSpotSpend: order.maxSpotSpend,
+      minPerpPrice: order.minPerpPrice,
+      collateral: order.collateral,
+      minSpread: order.minSpread,
+      maxFee: order.maxFee,
+    },
+  });
+}
+
+export function hashCloseOrder(
+  order: CloseOrder,
+  verifyingContract: Address,
+  chainId: number = 143
+): `0x${string}` {
+  const domain = getTandemDomain(verifyingContract, chainId);
+  return hashTypedData({
+    domain,
+    types: CLOSE_ORDER_TYPES,
+    primaryType: 'CloseOrder',
+    message: {
+      owner: order.owner,
+      account: order.account,
+      nonce: order.nonce,
+      expiry: order.expiry,
+      kuruMarket: order.kuruMarket,
+      quoteToken: order.quoteToken,
+      perpId: order.perpId,
+      quantity: order.quantity,
+      perpLots: order.perpLots,
+      minSpotProceeds: order.minSpotProceeds,
+      maxPerpClosePrice: order.maxPerpClosePrice,
+      minExitSpread: order.minExitSpread,
+    },
+  });
+}
+

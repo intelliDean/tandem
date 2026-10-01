@@ -74,11 +74,11 @@ async function ensureAnvilEnvironment() {
     // Ensure trader has funds and approvals on local node
     await traderWallet.request({
       method: 'anvil_setStorageAt' as any,
-      params: [USDC_ADDRESS, '0xcb8911fb82c2d10f6cf1d31d1e521ad3f4e3f42615f6ba67c454a9a2fdb9b6a7', '0x000000000000000000000000000000000000000000000000000000003b9aca00']
+      params: [USDC_ADDRESS, '0xcb8911fb82c2d10f6cf1d31d1e521ad3f4e3f42615f6ba67c454a9a2fdb9b6a7', '0x000000000000000000000000000000000000000000000000000000003b9aca00'] as any
     });
     await traderWallet.request({
       method: 'anvil_setStorageAt' as any,
-      params: [AUSD_ADDRESS, '0xde9225d66e9b1b434dc49256ceab265e6504c3cc2d588b28c1149de35a3750c7', '0x0000000000000000000000000000000000000000000000000000003b9aca0000']
+      params: [AUSD_ADDRESS, '0xde9225d66e9b1b434dc49256ceab265e6504c3cc2d588b28c1149de35a3750c7', '0x0000000000000000000000000000000000000000000000000000003b9aca0000'] as any
     });
 
     await traderWallet.writeContract({
