@@ -30,6 +30,19 @@ $$\textbf{0 MON bought} \quad\bullet\quad \textbf{0 quote spent} \quad\bullet\qu
 
 ---
 
+## Comprehensive Documentation Index
+
+For in-depth deep dives, mathematical proofs, security specifications, and operational manuals, see:
+
+| Document | Description |
+| :--- | :--- |
+| 📐 [**System Architecture**](file:///mnt/data/Projects/tandem/docs/ARCHITECTURE.md) | Multi-leg orchestration flow, contract design, venue adapters, and component diagrams |
+| 🧮 [**Mathematical Specification**](file:///mnt/data/Projects/tandem/docs/MATHEMATICAL_SPEC.md) | Formal basis equations, slippage calculations, lot sizing, and conservative rounding rules |
+| 🛡️ [**Security Model & Invariants**](file:///mnt/data/Projects/tandem/docs/SECURITY_INVARIANTS.md) | Invariant catalog, EIP-712 10-point binding, replay protection, and trader sovereign recovery |
+| 🚀 [**Deployment & Verification Guide**](file:///mnt/data/Projects/tandem/docs/DEPLOYMENT_AND_TESTING.md) | Local Anvil fork instructions, Foundry testing matrix, full E2E flow, and Docker quickstart |
+
+---
+
 ## 2. Architecture & Protocol Mechanics
 
 ```
