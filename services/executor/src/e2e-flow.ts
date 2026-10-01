@@ -1,11 +1,14 @@
-import { createPublicClient, createWalletClient, http, formatEther, formatUnits, parseUnits } from 'viem';
+import { createPublicClient, createWalletClient, http, formatEther, formatUnits, parseEther, parseUnits } from 'viem';
 import { privateKeyToAccount } from 'viem/accounts';
 import {
   TANDEM_SPREAD_ROUTER_ABI,
   KURU_ORDERBOOK_ABI,
   ERC20_ABI,
   SpreadOrder,
+  CloseOrder,
   signSpreadOrder,
+  signCloseOrder,
+  hashCloseOrder,
   monadChain,
 } from '@tandem/sdk';
 import { simulateSpreadOrder } from './simulator.js';
@@ -13,7 +16,7 @@ import { dispatchSpreadOrder } from './dispatcher.js';
 
 // Configuration
 const RPC_URL = process.env.MONAD_RPC_URL || 'http://127.0.0.1:8545';
-const ROUTER_ADDRESS = (process.env.TANDEM_ROUTER_ADDRESS || '0xcF7AC4DAfF8D8050362EaC01DcF1155797b99125') as `0x${string}`;
+const ROUTER_ADDRESS = (process.env.TANDEM_ROUTER_ADDRESS || '0xaD82Ecf79e232B0391C5479C7f632aA1EA701Ed1') as `0x${string}`;
 
 const TRADER_KEY = '0xac0974bec39a17e36ba4a6b4d238ff944bacb478cbed5efcae784d7bf4f2ff80' as `0x${string}`;
 const traderAccount = privateKeyToAccount(TRADER_KEY);
@@ -249,8 +252,73 @@ async function main() {
   const badSim = await simulateSpreadOrder(ROUTER_ADDRESS, badOrder, badSig, traderAccount.address, publicClient);
   console.log(`  High-Spread Simulation Correctly Reverted: ${!badSim.success} (${badSim.error})`);
 
+  // 9. Reverse Flow: Paired Atomic Exit (Close Order)
+  console.log('\n--- [Step 9] Executing Reverse Flow: Paired Atomic Exit (Close Order) ---');
+  const closeOrder: CloseOrder = {
+    owner: traderAccount.address,
+    account: traderAccount.address,
+    nonce: BigInt(Date.now() + 2000),
+    expiry: BigInt(Math.floor(Date.now() / 1000) + 3600),
+    kuruMarket: KURU_MON_USDC,
+    quoteToken: USDC_ADDRESS,
+    perpId: 1n,
+    quantity: parseEther('1.0'), // Sell 1.0 MON
+    perpLots: 100n, // Close the 100-lot short
+    minSpotProceeds: 10_000n, // Minimum 0.01 USDC
+    maxPerpClosePrice: 900_000n, // Max buy-back limit
+    minExitSpread: -100_000_000_000n,
+  };
+
+  const closeSig = await signCloseOrder(traderWallet, traderAccount, closeOrder, ROUTER_ADDRESS, 143);
+  const closeHash = hashCloseOrder(closeOrder, ROUTER_ADDRESS, 143);
+  console.log(`  Close Order Hash: ${closeHash}`);
+  console.log(`  EIP-712 Close Signature: ${closeSig.slice(0, 32)}...`);
+
+  const usdcBeforeExit = await publicClient.readContract({
+    address: USDC_ADDRESS,
+    abi: ERC20_ABI,
+    functionName: 'balanceOf',
+    args: [traderAccount.address],
+  });
+
+  console.log('  Broadcasting closeSpreadOrder transaction...');
+  const exitTxHash = await traderWallet.writeContract({
+    address: ROUTER_ADDRESS,
+    abi: TANDEM_SPREAD_ROUTER_ABI,
+    functionName: 'closeSpreadOrder',
+    args: [closeOrder, closeSig],
+    value: parseEther('1.01'), // Send native MON to sell on Kuru
+  });
+
+  console.log(`  Close Transaction Hash: ${exitTxHash}`);
+  const exitReceipt = await publicClient.waitForTransactionReceipt({ hash: exitTxHash });
+  console.log(`  Exit Status: ${exitReceipt.status.toUpperCase()}`);
+  console.log(`  Exit Gas Used: ${exitReceipt.gasUsed.toString()}`);
+
+  if (exitReceipt.status !== 'success') {
+    throw new Error('Onchain close transaction reverted!');
+  }
+
+  const usdcAfterExit = await publicClient.readContract({
+    address: USDC_ADDRESS,
+    abi: ERC20_ABI,
+    functionName: 'balanceOf',
+    args: [traderAccount.address],
+  });
+  const proceeds = usdcAfterExit - usdcBeforeExit;
+  console.log(`  Spot MON Sold:          1.000 MON`);
+  console.log(`  USDC Proceeds Received: +${formatUnits(proceeds, 6)} USDC`);
+
+  const isCloseExecuted = await publicClient.readContract({
+    address: ROUTER_ADDRESS,
+    abi: TANDEM_SPREAD_ROUTER_ABI,
+    functionName: 'isOrderExecuted',
+    args: [closeHash],
+  });
+  console.log(`  On-chain Replay Protection for Close: isOrderExecuted = ${isCloseExecuted}`);
+
   console.log('\n================================================================');
-  console.log('🎉 LIVE E2E FLOW COMPLETED SUCCESSFULLY WITH 100% ATOMIC SAFETY!');
+  console.log('🎉 FULL ROUND-TRIP LIFECYCLE (ENTRY -> HOLD -> ATOMIC EXIT) PASS!');
   console.log('================================================================\n');
 }
 

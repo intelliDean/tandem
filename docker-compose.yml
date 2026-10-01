@@ -12,6 +12,8 @@ services:
       - MONAD_RPC_URL=${MONAD_RPC_URL:-https://testnet-rpc.monad.xyz}
       - TANDEM_ROUTER_ADDRESS=${TANDEM_ROUTER_ADDRESS:-0xC7885f87e2027F90D8cd4372CE5071b3aFE19E91}
       - EXECUTOR_PRIVATE_KEY=${EXECUTOR_PRIVATE_KEY:-}
+    extra_hosts:
+      - "host.docker.internal:host-gateway"
     restart: unless-stopped
     healthcheck:
       test: ["CMD-SHELL", "wget -qO- http://127.0.0.1:3001/health || exit 1"]
