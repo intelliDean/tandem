@@ -13,7 +13,8 @@
     "docker:build": "pnpm build && docker compose build",
     "docker:up": "docker compose up -d",
     "docker:down": "docker compose down",
-    "docker:logs": "docker compose logs -f"
+    "docker:logs": "docker compose logs -f",
+    "demo:record": "tsx scripts/record-demo.ts"
   },
   "devDependencies": {
     "playwright-core": "^1.63.0",
