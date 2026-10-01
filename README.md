@@ -6,6 +6,7 @@
 [![Monad Metropolis](https://img.shields.io/badge/Hackathon-Monad%20Metropolis-836EF9?style=for-the-badge)](https://monad.xyz)
 [![Track](https://img.shields.io/badge/Track-Onchain%20Finance%20%26%20Trading-00F0FF?style=for-the-badge)](https://monad.xyz)
 [![Atomic Guarantee](https://img.shields.io/badge/Safety-100%25%20Atomic%20Rollback-00FF88?style=for-the-badge)](file:///mnt/data/Projects/tandem/src/TandemSpreadRouter.sol)
+[![CI](https://github.com/intelliDean/tandem/actions/workflows/ci.yml/badge.svg)](https://github.com/intelliDean/tandem/actions/workflows/ci.yml)
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg?style=for-the-badge)](file:///mnt/data/Projects/tandem/LICENSE)
 
 ---

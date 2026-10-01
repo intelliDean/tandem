@@ -1,0 +1,90 @@
+name: CI
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+    branches: [main]
+  workflow_dispatch:
+
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  contracts:
+    name: Foundry Contracts & Fork Tests
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+        with:
+          submodules: recursive
+
+      - name: Install Foundry
+        uses: foundry-rs/foundry-toolchain@v1
+        with:
+          version: nightly
+
+      - name: Verify Foundry installation
+        run: |
+          forge --version
+          cast --version
+
+      - name: Build smart contracts
+        run: forge build
+
+      - name: Run Foundry unit & fork tests (Pinned Monad Block 109312895)
+        run: forge test --fork-url https://rpc.monad.xyz --fork-block-number 109312895 -vv
+
+  typescript:
+    name: TypeScript Build & Monorepo Typecheck
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Install pnpm
+        uses: pnpm/action-setup@v4
+        with:
+          version: 9
+
+      - name: Setup Node.js 22 LTS
+        uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: 'pnpm'
+
+      - name: Install monorepo dependencies
+        run: pnpm install --frozen-lockfile
+
+      - name: Build all workspace packages (@tandem/sdk, @tandem/executor, @tandem/web)
+        run: pnpm build
+
+  docker:
+    name: Docker Containerization Build
+    runs-on: ubuntu-latest
+    needs: [contracts, typescript]
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Install pnpm
+        uses: pnpm/action-setup@v4
+        with:
+          version: 9
+
+      - name: Setup Node.js 22 LTS
+        uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: 'pnpm'
+
+      - name: Install dependencies
+        run: pnpm install --frozen-lockfile
+
+      - name: Build workspace bundles for container packaging
+        run: pnpm build
+
+      - name: Build Docker Compose images
+        run: docker compose build
