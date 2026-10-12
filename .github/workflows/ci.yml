@@ -24,7 +24,8 @@ jobs:
       - name: Install Foundry
         uses: foundry-rs/foundry-toolchain@v1
         with:
-          version: stable
+          version: "v1.5.1"
+          cache: false
 
       - name: Verify Foundry installation
         run: |
@@ -38,12 +39,17 @@ jobs:
         run: |
           mkdir -p ~/.foundry/cache/rpc
           tar -xzf test/fixtures/rpc-cache-143.tar.gz -C ~/.foundry/cache/rpc
+          cd ~/.foundry/cache/rpc
+          ln -sf 143 monad
+          ln -sf 143 monad-mainnet
+          mkdir -p ~/.cache/foundry
+          ln -sf ~/.foundry/cache/rpc ~/.cache/foundry/rpc
           ls -la ~/.foundry/cache/rpc/143 | head -n 5
 
       - name: Run Foundry unit & fork tests (Pinned Monad Block 109312895)
         run: |
           set -o pipefail
-          if ! forge test --fork-url https://rpc.monad.xyz --fork-block-number 109312895 -vv 2>&1 | tee test-output.log; then
+          if ! forge test --fork-url https://rpc.monad.xyz --fork-block-number 109312895 --fork-retries 10 --fork-retry-backoff 3 -vv 2>&1 | tee test-output.log; then
             MSG=$(head -n 25 test-output.log | tr '\r\n' '  ' | sed 's/"/\\"/g' | cut -c 1-2000)
             echo "::error title=Forge Failure::$MSG"
             exit 1
