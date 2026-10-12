@@ -34,14 +34,15 @@ jobs:
       - name: Build smart contracts
         run: forge build
 
-      - name: Run Foundry unit & fork tests (Pinned Monad Block 109312895)
+      - name: Restore RPC Fork Cache
         run: |
-          set -o pipefail
-          if ! forge test --fork-url https://rpc.monad.xyz --fork-block-number 109312895 -vv 2>&1 | tee test-output.log; then
-            ERR=$(head -n 15 test-output.log | tr '\r\n' '  ' | sed 's/"/\\"/g')
-            echo "::error title=Forge Test Error::$ERR"
-            exit 1
+          mkdir -p ~/.foundry/cache/rpc
+          if [ -f test/fixtures/rpc-cache-143.tar.gz ]; then
+            tar -xzf test/fixtures/rpc-cache-143.tar.gz -C ~/.foundry/cache/rpc
           fi
+
+      - name: Run Foundry unit & fork tests (Pinned Monad Block 109312895)
+        run: forge test --fork-url https://rpc.monad.xyz --fork-block-number 109312895 -vv
 
   typescript:
     name: TypeScript Build & Monorepo Typecheck
