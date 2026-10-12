@@ -37,16 +37,10 @@ jobs:
       - name: Run Foundry unit & fork tests (Pinned Monad Block 109312895)
         run: |
           set -o pipefail
-          forge test --fork-url https://rpc.monad.xyz --fork-block-number 109312895 -vv 2>&1 | tee test-output.log
-
-      - name: Publish Test Results to Summary
-        if: always()
-        run: |
-          if [ -f test-output.log ]; then
-            echo "### Foundry Test Log" >> $GITHUB_STEP_SUMMARY
-            echo '```' >> $GITHUB_STEP_SUMMARY
-            tail -n 100 test-output.log >> $GITHUB_STEP_SUMMARY
-            echo '```' >> $GITHUB_STEP_SUMMARY
+          if ! forge test --fork-url https://rpc.monad.xyz --fork-block-number 109312895 -vv 2>&1 | tee test-output.log; then
+            ERR=$(head -n 15 test-output.log | tr '\r\n' '  ' | sed 's/"/\\"/g')
+            echo "::error title=Forge Test Error::$ERR"
+            exit 1
           fi
 
   typescript:
