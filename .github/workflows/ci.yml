@@ -35,7 +35,19 @@ jobs:
         run: forge build
 
       - name: Run Foundry unit & fork tests (Pinned Monad Block 109312895)
-        run: forge test --fork-url https://rpc.monad.xyz --fork-block-number 109312895 --fork-retries 10 --fork-retry-backoff 5 -vv
+        run: |
+          set -o pipefail
+          forge test --fork-url https://rpc.monad.xyz --fork-block-number 109312895 -vv 2>&1 | tee test-output.log
+
+      - name: Publish Test Results to Summary
+        if: always()
+        run: |
+          if [ -f test-output.log ]; then
+            echo "### Foundry Test Log" >> $GITHUB_STEP_SUMMARY
+            echo '```' >> $GITHUB_STEP_SUMMARY
+            tail -n 100 test-output.log >> $GITHUB_STEP_SUMMARY
+            echo '```' >> $GITHUB_STEP_SUMMARY
+          fi
 
   typescript:
     name: TypeScript Build & Monorepo Typecheck
