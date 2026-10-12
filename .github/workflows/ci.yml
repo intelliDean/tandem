@@ -24,7 +24,7 @@ jobs:
       - name: Install Foundry
         uses: foundry-rs/foundry-toolchain@v1
         with:
-          version: nightly
+          version: stable
 
       - name: Verify Foundry installation
         run: |
@@ -35,7 +35,7 @@ jobs:
         run: forge build
 
       - name: Run Foundry unit & fork tests (Pinned Monad Block 109312895)
-        run: forge test --fork-url https://rpc.monad.xyz --fork-block-number 109312895 -vv
+        run: forge test --fork-url https://rpc.monad.xyz --fork-block-number 109312895 --fork-retries 10 --fork-retry-backoff 5 -vv
 
   typescript:
     name: TypeScript Build & Monorepo Typecheck

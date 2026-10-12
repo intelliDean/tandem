@@ -6,7 +6,8 @@ solc = "0.8.26"
 optimizer = true
 optimizer_runs = 200
 via_ir = true
+rpc_retries = 10
+rpc_timeout = 30000
 
 # Fork configuration -- Monad mainnet
 # Chain ID: 143
-# Run tests with: forge test --fork-url https://rpc.monad.xyz -vvvv
