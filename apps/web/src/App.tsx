@@ -20,6 +20,8 @@ import { MonitoredOrdersQueue } from './components/MonitoredOrdersQueue.js';
 import { RollbackProver } from './components/RollbackProver.js';
 import { OrderItem, MarketState, PositionState } from './types.js';
 
+const API_BASE = (import.meta.env.VITE_API_URL || '').replace(/\/$/, '');
+
 export default function App() {
   const [activeTab, setActiveTab] = useState<'NOW' | 'LIMIT'>('NOW');
   const [walletConnected, setWalletConnected] = useState(false);
@@ -61,7 +63,7 @@ export default function App() {
   // 1. Live Market Polling from Executor Backend
   const fetchMarketData = useCallback(async () => {
     try {
-      const res = await fetch('/api/market');
+      const res = await fetch(`${API_BASE}/api/market`);
       if (!res.ok) return;
       const data = await res.json();
 
@@ -80,7 +82,7 @@ export default function App() {
   // 2. Live Orders Queue Polling from Executor Backend
   const fetchOrders = useCallback(async () => {
     try {
-      const res = await fetch('/api/orders');
+      const res = await fetch(`${API_BASE}/api/orders`);
       if (!res.ok) return;
       const data = await res.json();
 
@@ -253,7 +255,7 @@ export default function App() {
       const orderHash = hashSpreadOrder(order, CONTRACT_ADDRESSES.TANDEM_SPREAD_ROUTER, activeChainId);
       setExecutionMessage('Signature confirmed! Submitting order to Executor bot queue...');
 
-      const res = await fetch('/api/orders', {
+      const res = await fetch(`${API_BASE}/api/orders`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
@@ -365,7 +367,7 @@ export default function App() {
       const orderHash = hashCloseOrder(closeOrder, CONTRACT_ADDRESSES.TANDEM_SPREAD_ROUTER, activeChainId);
       setExecutionMessage('Submitting paired atomic exit to Executor relayer...');
 
-      const res = await fetch('/api/orders/close', {
+      const res = await fetch(`${API_BASE}/api/orders/close`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
